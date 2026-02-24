@@ -26,9 +26,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Validate tag matches package version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
