@@ -1,10 +1,10 @@
 {
-  "name": "create-storefront-cli",
+  "name": "@alphasquad/create-storefront-cli",
   "version": "1.0.0",
   "description": "A CLI tool for scaffolding Saleor storefronts from templates",
   "main": "index.js",
   "bin": {
-    "create-storefront": "./index.js"
+    "create-storefront": "index.js"
   },
   "files": [
     "index.js",
