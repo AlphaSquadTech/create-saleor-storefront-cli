@@ -1,0 +1,28 @@
+{
+  "name": "create-storefront-cli",
+  "version": "1.0.0",
+  "description": "A CLI tool for scaffolding Saleor storefronts from templates",
+  "main": "index.js",
+  "bin": {
+    "create-storefront": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "settings.json"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "saleor",
+    "storefront",
+    "scaffold",
+    "cli",
+    "ecommerce"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  }
+}
