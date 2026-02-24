@@ -20,6 +20,14 @@
     "cli",
     "ecommerce"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlphaSquadTech/create-saleor-storefront-cli"
+  },
+  "bugs": {
+    "url": "https://github.com/AlphaSquadTech/create-saleor-storefront-cli/issues"
+  },
+  "homepage": "https://github.com/AlphaSquadTech/create-saleor-storefront-cli#readme",
   "author": "",
   "license": "ISC",
   "engines": {
