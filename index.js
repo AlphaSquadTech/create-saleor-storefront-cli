@@ -363,33 +363,70 @@ const authUrl = injectPat(TEMPLATE_URL, pat);
 run(`git clone "${authUrl}" "${TARGET_DIR}"`);
 ok("Template cloned.");
 
-// ─── Step 3: Init submodule ──────────────────────────────────────
-step("3/6", "Initializing submodules…");
+// ─── Step 3: Fresh git init ──────────────────────────────────────
+step("3/6", "Initializing fresh git repository…");
 
-// Configure git URL rewrite so submodule fetches also use the PAT
-run(
-  `git config --global url."https://${pat}@github.com/".insteadOf "https://github.com/"`,
-  { cwd: TARGET_DIR }
-);
-run("git submodule sync", { cwd: TARGET_DIR });
-run("git submodule update --init --recursive", { cwd: TARGET_DIR });
-
-// Clean up the global URL rewrite so it doesn't leak into other operations
-try {
-  execSync(
-    'git config --global --unset url."https://' +
-      pat +
-      '@github.com/".insteadOf',
-    { stdio: "pipe" }
-  );
-} catch {
-  // May already be absent — that's fine
+// Parse .gitmodules before removing .git so we know which submodules to add later
+const gitmodulesPath = path.join(TARGET_DIR, ".gitmodules");
+const submodules = [];
+if (fs.existsSync(gitmodulesPath)) {
+  const gmContent = fs.readFileSync(gitmodulesPath, "utf8");
+  const submoduleRegex = /\[submodule\s+"[^"]*"]\s*\n\s*path\s*=\s*(.+)\n\s*url\s*=\s*(.+)/g;
+  let m;
+  while ((m = submoduleRegex.exec(gmContent)) !== null) {
+    submodules.push({ path: m[1].trim(), url: m[2].trim() });
+  }
 }
 
-ok("Submodules initialized.");
+// Remove template's git history and start fresh
+fs.rmSync(path.join(TARGET_DIR, ".git"), { recursive: true, force: true });
+// Remove submodule placeholder directories (empty from clone without --recurse-submodules)
+for (const sub of submodules) {
+  const subPath = path.join(TARGET_DIR, sub.path);
+  if (fs.existsSync(subPath)) {
+    fs.rmSync(subPath, { recursive: true, force: true });
+  }
+}
+// Remove .gitmodules — git submodule add will recreate it
+if (fs.existsSync(gitmodulesPath)) {
+  fs.rmSync(gitmodulesPath);
+}
 
-// ─── Step 4: .env.local ──────────────────────────────────────────
-step("4/6", "Creating .env.local…");
+run("git init", { cwd: TARGET_DIR });
+ok("Fresh git repo initialized.");
+
+// ─── Step 4: Init submodules ─────────────────────────────────────
+step("4/6", "Adding submodules…");
+
+if (submodules.length === 0) {
+  info("No submodules found in template.");
+} else {
+  // Temporarily set a global URL rewrite so git submodule add can authenticate
+  run(
+    `git config --global url."https://${pat}@github.com/".insteadOf "https://github.com/"`,
+    { cwd: TARGET_DIR }
+  );
+
+  for (const sub of submodules) {
+    run(`git submodule add "${sub.url}" "${sub.path}"`, { cwd: TARGET_DIR });
+    ok(`Submodule "${sub.path}" added.`);
+  }
+
+  // Clean up the global URL rewrite so it doesn't leak the PAT
+  try {
+    execSync(
+      'git config --global --unset url."https://' +
+        pat +
+        '@github.com/".insteadOf',
+      { stdio: "pipe" }
+    );
+  } catch {
+    // May already be absent — that's fine
+  }
+}
+
+// ─── Step 5: .env.local ──────────────────────────────────────────
+step("5/6", "Creating .env.local…");
 
 const envExamplePath = path.join(TARGET_DIR, ".env.example");
 
@@ -427,21 +464,16 @@ for (const [key, value] of Object.entries(allOverrides)) {
 fs.writeFileSync(path.join(TARGET_DIR, ".env.local"), envContent);
 ok(`.env.local created with ${appliedKeys.size} override(s).`);
 
-// ─── Step 5: redirects.json ──────────────────────────────────────
-step("5/6", "Creating redirects.json…");
+// ─── Step 6: redirects.json & initial commit ────────────────────
+step("6/6", "Creating redirects.json & committing…");
 fs.writeFileSync(path.join(TARGET_DIR, "redirects.json"), "[]\n");
 ok("redirects.json created.");
 
-// ─── Step 6: Fresh git init ──────────────────────────────────────
-step("6/6", "Initializing fresh git repository…");
-
-fs.rmSync(path.join(TARGET_DIR, ".git"), { recursive: true, force: true });
-run("git init", { cwd: TARGET_DIR });
 run("git add -A", { cwd: TARGET_DIR });
 run('git commit -m "Initial commit — scaffolded from storefront template"', {
   cwd: TARGET_DIR,
 });
-ok("Fresh git repo initialized.");
+ok("Initial commit created.");
 
 // ─── Done ────────────────────────────────────────────────────────
 console.log(`
