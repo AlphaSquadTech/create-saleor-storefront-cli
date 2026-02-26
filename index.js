@@ -34,12 +34,17 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
-      const next = argv[i + 1];
-      if (next && !next.startsWith("--")) {
-        args[key] = next;
-        i++;
+      // Handle --no-<flag> as <flag> = false
+      if (key.startsWith("no-")) {
+        args[key.slice(3)] = false;
       } else {
-        args[key] = true;
+        const next = argv[i + 1];
+        if (next && !next.startsWith("--")) {
+          args[key] = next;
+          i++;
+        } else {
+          args[key] = true;
+        }
       }
     }
   }
@@ -187,15 +192,18 @@ function run(cmd, opts = {}) {
 const TEMPLATES = {
   standard: {
     url: "https://github.com/AlphaSquadTech/saleor-template-standard.git",
+    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-standard.git",
     ready: true,
   },
   advanced: {
-    url: null,
-    ready: false,
+    url: "https://github.com/AlphaSquadTech/saleor-template-advance.git",
+    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-advance.git",
+    ready: true,
   },
   basic: {
-    url: null,
-    ready: false,
+    url: "https://github.com/AlphaSquadTech/saleor-template-basic.git",
+    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-basic.git",
+    ready: true,
   },
 };
 
@@ -223,12 +231,20 @@ ${c.bold}Usage:${c.reset}
 ${c.bold}Options:${c.reset}
   --name          ${c.dim}(required)${c.reset}  Tenant / directory name
   --template      ${c.dim}(optional)${c.reset}  Template variant: standard, advanced, basic (default: standard)
-  --pat           ${c.dim}(optional)${c.reset}  GitHub Personal Access Token
+  --no-ssh        ${c.dim}(optional)${c.reset}  Disable SSH and use HTTPS + PAT instead
+  --pat           ${c.dim}(optional)${c.reset}  GitHub Personal Access Token (implies --no-ssh)
   --settings      ${c.dim}(optional)${c.reset}  Path to settings.json (default: ./settings.json)
   --template-url  ${c.dim}(optional)${c.reset}  Git URL (overrides --template)
   --help          Show this message
 
-${c.bold}PAT resolution order:${c.reset}
+${c.bold}Authentication:${c.reset}
+  SSH is the default auth method. The CLI will use your SSH agent and
+  keys (~/.ssh/) to clone repos — no token needed.
+
+  To fall back to HTTPS + PAT, pass --no-ssh or --pat <token>, or set
+  the GITHUB_PAT environment variable.
+
+${c.bold}PAT resolution order${c.reset} (when using HTTPS):
   1. GITHUB_PAT environment variable
   2. --pat flag
   3. Interactive prompt (masked)
@@ -246,14 +262,17 @@ ${c.bold}settings.json format:${c.reset}
   the cloned repo and interactively prompt for each value.
 
 ${c.bold}Examples:${c.reset}
-  ${c.dim}# With settings.json in CWD${c.reset}
+  ${c.dim}# Default — uses SSH keys${c.reset}
+  node cli/newCliTool/index.js --name my-tenant
+
+  ${c.dim}# Explicit PAT (switches to HTTPS mode)${c.reset}
+  node cli/newCliTool/index.js --name my-tenant --pat ghp_xxx
+
+  ${c.dim}# PAT via environment variable (switches to HTTPS mode)${c.reset}
   GITHUB_PAT=ghp_xxx node cli/newCliTool/index.js --name my-tenant
 
-  ${c.dim}# With explicit paths${c.reset}
-  node cli/newCliTool/index.js --name my-tenant --pat ghp_xxx --settings /path/to/settings.json
-
-  ${c.dim}# Fully interactive${c.reset}
-  node cli/newCliTool/index.js --name my-tenant
+  ${c.dim}# Force HTTPS mode — prompts for PAT interactively${c.reset}
+  node cli/newCliTool/index.js --name my-tenant --no-ssh
 `);
   process.exit(0);
 }
@@ -283,24 +302,35 @@ ${c.bold}${c.yellow}┌───────────────────
   process.exit(0);
 }
 
-// ─── Step 1: Resolve PAT ─────────────────────────────────────────
-step("1/6", "Resolving GitHub PAT…");
+// ─── Step 1: Resolve auth mode ───────────────────────────────────
+step("1/6", "Resolving authentication…");
 
-let pat = process.env.GITHUB_PAT || args.pat || null;
+// SSH is the default unless explicitly disabled or a PAT is provided
+const hasPat = !!(process.env.GITHUB_PAT || args.pat);
+const useSSH = args.ssh !== false && !hasPat;
 
-if (pat) {
-  ok(
-    `PAT resolved from ${process.env.GITHUB_PAT ? "GITHUB_PAT env var" : "--pat flag"}.`
-  );
+let pat = null;
+
+if (useSSH) {
+  ok("Using SSH authentication (default). Your SSH agent / keys will be used.");
 } else {
-  info("No PAT found in environment or flags — prompting.");
-  pat = promptSecret(
-    `  ${c.cyan}GitHub PAT${c.reset}: `
-  );
-  if (!pat) {
-    fail("A GitHub PAT is required to clone private repos.");
+  info("Using HTTPS + PAT authentication.");
+  pat = process.env.GITHUB_PAT || args.pat || null;
+
+  if (pat) {
+    ok(
+      `PAT resolved from ${process.env.GITHUB_PAT ? "GITHUB_PAT env var" : "--pat flag"}.`
+    );
+  } else {
+    info("No PAT found in environment or flags — prompting.");
+    pat = promptSecret(
+      `  ${c.cyan}GitHub PAT${c.reset}: `
+    );
+    if (!pat) {
+      fail("A GitHub PAT is required when using HTTPS mode.");
+    }
+    ok("PAT received.");
   }
-  ok("PAT received.");
 }
 
 // ─── Resolve settings ────────────────────────────────────────────
@@ -326,14 +356,30 @@ if (fs.existsSync(settingsPath)) {
 
 const envOverrides = settings.env || {};
 const TENANT_NAME = args.name;
-const TEMPLATE_URL =
-  args["template-url"] || settings.templateUrl || TEMPLATES[templateChoice].url;
+const TEMPLATE_URL = (() => {
+  const customUrl = args["template-url"] || settings.templateUrl;
+  if (customUrl) {
+    // If user provided a custom URL, convert to SSH if in SSH mode
+    return useSSH ? httpsToSsh(customUrl) : customUrl;
+  }
+  return useSSH
+    ? TEMPLATES[templateChoice].sshUrl
+    : TEMPLATES[templateChoice].url;
+})();
 const TARGET_DIR = path.resolve(process.cwd(), TENANT_NAME);
 
 // Inject PAT into the template URL for authenticated clone
 function injectPat(url, token) {
   // Convert https://github.com/... → https://<PAT>@github.com/...
   return url.replace(/^https:\/\//, `https://${token}@`);
+}
+
+// Convert an HTTPS GitHub URL to its SSH equivalent
+function httpsToSsh(url) {
+  // https://github.com/Org/Repo.git → git@github.com:Org/Repo.git
+  const match = url.match(/^https:\/\/github\.com\/(.+)$/);
+  if (match) return `git@github.com:${match[1]}`;
+  return url; // return as-is if not a GitHub HTTPS URL
 }
 
 // ─── Banner ──────────────────────────────────────────────────────
@@ -359,8 +405,12 @@ if (fs.existsSync(TARGET_DIR)) {
   fail(`Directory "${TENANT_NAME}" already exists.`);
 }
 
-const authUrl = injectPat(TEMPLATE_URL, pat);
-run(`git clone "${authUrl}" "${TARGET_DIR}"`);
+if (useSSH) {
+  run(`git clone "${TEMPLATE_URL}" "${TARGET_DIR}"`);
+} else {
+  const authUrl = injectPat(TEMPLATE_URL, pat);
+  run(`git clone "${authUrl}" "${TARGET_DIR}"`);
+}
 ok("Template cloned.");
 
 // ─── Step 3: Fresh git init ──────────────────────────────────────
@@ -400,10 +450,21 @@ step("4/6", "Adding submodules…");
 
 if (submodules.length === 0) {
   info("No submodules found in template.");
+} else if (useSSH) {
+  // SSH mode: submodule URLs in .gitmodules already use SSH, just add them
+  for (const sub of submodules) {
+    run(`git submodule add "${sub.url}" "${sub.path}"`, { cwd: TARGET_DIR });
+    ok(`Submodule "${sub.path}" added.`);
+  }
 } else {
-  // Temporarily set a global URL rewrite so git submodule add can authenticate
+  // PAT mode: temporarily set a global URL rewrite so git submodule add can authenticate
   run(
     `git config --global url."https://${pat}@github.com/".insteadOf "https://github.com/"`,
+    { cwd: TARGET_DIR }
+  );
+  // Also rewrite SSH URLs to PAT-authenticated HTTPS
+  run(
+    `git config --global url."https://${pat}@github.com/".insteadOf "git@github.com:"`,
     { cwd: TARGET_DIR }
   );
 
@@ -412,12 +473,22 @@ if (submodules.length === 0) {
     ok(`Submodule "${sub.path}" added.`);
   }
 
-  // Clean up the global URL rewrite so it doesn't leak the PAT
+  // Clean up the global URL rewrites so they don't leak the PAT
   try {
     execSync(
       'git config --global --unset url."https://' +
         pat +
-        '@github.com/".insteadOf',
+        '@github.com/".insteadOf "https://github.com/"',
+      { stdio: "pipe" }
+    );
+  } catch {
+    // May already be absent — that's fine
+  }
+  try {
+    execSync(
+      'git config --global --unset url."https://' +
+        pat +
+        '@github.com/".insteadOf "git@github.com:"',
       { stdio: "pipe" }
     );
   } catch {
