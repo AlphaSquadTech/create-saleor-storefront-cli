@@ -190,6 +190,11 @@ function run(cmd, opts = {}) {
 
 // ─── Template registry ───────────────────────────────────────────
 const TEMPLATES = {
+  basic: {
+    url: "https://github.com/AlphaSquadTech/saleor-template-basic.git",
+    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-basic.git",
+    ready: true,
+  },
   standard: {
     url: "https://github.com/AlphaSquadTech/saleor-template-standard.git",
     sshUrl: "git@github.com:AlphaSquadTech/saleor-template-standard.git",
@@ -198,11 +203,6 @@ const TEMPLATES = {
   advanced: {
     url: "https://github.com/AlphaSquadTech/saleor-template-advance.git",
     sshUrl: "git@github.com:AlphaSquadTech/saleor-template-advance.git",
-    ready: true,
-  },
-  basic: {
-    url: "https://github.com/AlphaSquadTech/saleor-template-basic.git",
-    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-basic.git",
     ready: true,
   },
 };
@@ -230,7 +230,7 @@ ${c.bold}Usage:${c.reset}
 
 ${c.bold}Options:${c.reset}
   --name          ${c.dim}(required)${c.reset}  Tenant / directory name
-  --template      ${c.dim}(optional)${c.reset}  Template variant: standard, advanced, basic (default: standard)
+  --template      ${c.dim}(optional)${c.reset}  Template variant: basic, standard, advanced (prompts if omitted)
   --no-ssh        ${c.dim}(optional)${c.reset}  Disable SSH and use HTTPS + PAT instead
   --pat           ${c.dim}(optional)${c.reset}  GitHub Personal Access Token (implies --no-ssh)
   --settings      ${c.dim}(optional)${c.reset}  Path to settings.json (default: ./settings.json)
@@ -282,12 +282,28 @@ if (!args.name) {
 }
 
 // ─── Resolve template variant ────────────────────────────────────
-const templateChoice = (args.template || "standard").toLowerCase();
+let templateChoice;
 
-if (!VALID_TEMPLATES.includes(templateChoice)) {
-  fail(
-    `Unknown template "${templateChoice}". Available templates: ${VALID_TEMPLATES.join(", ")}`
-  );
+if (args.template) {
+  templateChoice = args.template.toLowerCase();
+  if (!VALID_TEMPLATES.includes(templateChoice)) {
+    fail(
+      `Unknown template "${templateChoice}". Available templates: ${VALID_TEMPLATES.join(", ")}`
+    );
+  }
+} else {
+  console.log(`\n${c.bold}Select a template:${c.reset}\n`);
+  VALID_TEMPLATES.forEach((name, i) => {
+    console.log(`  ${c.cyan}${i + 1}${c.reset}) ${name}`);
+  });
+  console.log();
+  const answer = promptSync(`Enter choice (1-${VALID_TEMPLATES.length}): `).trim();
+  const idx = parseInt(answer, 10);
+  if (isNaN(idx) || idx < 1 || idx > VALID_TEMPLATES.length) {
+    fail(`Invalid selection "${answer}". Please enter a number between 1 and ${VALID_TEMPLATES.length}.`);
+  }
+  templateChoice = VALID_TEMPLATES[idx - 1];
+  info(`Selected template: ${c.bold}${templateChoice}${c.reset}`);
 }
 
 if (!TEMPLATES[templateChoice].ready) {

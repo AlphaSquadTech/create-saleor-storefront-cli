@@ -1,6 +1,6 @@
 {
   "name": "@alphasquad/create-storefront-cli",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A CLI tool for scaffolding Saleor storefronts from templates",
   "main": "index.js",
   "bin": {
