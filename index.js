@@ -196,13 +196,13 @@ const TEMPLATES = {
     ready: true,
   },
   standard: {
-    url: "https://github.com/AlphaSquadTech/saleor-template-standard.git",
-    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-standard.git",
+    url: "https://github.com/webshopmanager/saleor-template-standard.git",
+    sshUrl: "git@github.com:webshopmanager/saleor-template-standard.git",
     ready: true,
   },
   advanced: {
-    url: "https://github.com/AlphaSquadTech/saleor-template-advance.git",
-    sshUrl: "git@github.com:AlphaSquadTech/saleor-template-advance.git",
+    url: "https://github.com/webshopmanager/saleor-template-advance.git",
+    sshUrl: "git@github.com:webshopmanager/saleor-template-advance.git",
     ready: true,
   },
 };
