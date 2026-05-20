@@ -1,4 +1,4 @@
-# @alphasquad/create-storefront-cli
+# @webshopmanager/create-storefront-cli
 
 A CLI tool for scaffolding Saleor storefronts from templates.
 
@@ -11,7 +11,7 @@ A CLI tool for scaffolding Saleor storefronts from templates.
 ## Quick start
 
 ```bash
-npx @alphasquad/create-storefront-cli --name my-store
+npx @webshopmanager/create-storefront-cli --name my-store
 ```
 
 The CLI will prompt you to select a template:
@@ -29,7 +29,7 @@ Enter choice (1-3):
 Or install globally:
 
 ```bash
-npm i -g @alphasquad/create-storefront-cli
+npm i -g @webshopmanager/create-storefront-cli
 create-storefront --name my-store
 ```
 
@@ -63,7 +63,7 @@ If a `settings.json` file exists in your working directory (or at the path given
 
 ```json
 {
-  "templateUrl": "https://github.com/AlphaSquadTech/saleor-template-standard.git",
+  "templateUrl": "https://github.com/webshopmanager/saleor-template-standard.git",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.example.com/graphql/",
     "NEXT_PUBLIC_SITE_URL": "http://localhost:3000",
@@ -90,22 +90,22 @@ The CLI runs through 6 steps:
 
 ```bash
 # Fully interactive — prompts for template, uses SSH
-npx @alphasquad/create-storefront-cli --name my-store
+npx @webshopmanager/create-storefront-cli --name my-store
 
 # Skip template prompt by passing --template directly
-npx @alphasquad/create-storefront-cli --name my-store --template standard
+npx @webshopmanager/create-storefront-cli --name my-store --template standard
 
 # Explicit PAT (switches to HTTPS mode)
-npx @alphasquad/create-storefront-cli --name my-store --pat ghp_xxx
+npx @webshopmanager/create-storefront-cli --name my-store --pat ghp_xxx
 
 # PAT from environment
-GITHUB_PAT=ghp_xxx npx @alphasquad/create-storefront-cli --name my-store
+GITHUB_PAT=ghp_xxx npx @webshopmanager/create-storefront-cli --name my-store
 
 # Force HTTPS mode — prompts for PAT interactively
-npx @alphasquad/create-storefront-cli --name my-store --no-ssh
+npx @webshopmanager/create-storefront-cli --name my-store --no-ssh
 
 # Custom template repo
-npx @alphasquad/create-storefront-cli --name my-store --template-url https://github.com/org/repo.git
+npx @webshopmanager/create-storefront-cli --name my-store --template-url https://github.com/org/repo.git
 ```
 
 ## After scaffolding

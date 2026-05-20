@@ -3,6 +3,7 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const pkg = require("./package.json");
 
 // ─── Colors (ANSI) ───────────────────────────────────────────────
 const c = {
@@ -223,10 +224,10 @@ const args = parseArgs(process.argv);
 
 if (args.help) {
   console.log(`
-${c.bold}newCliTool${c.reset} — Standalone storefront scaffolding CLI
+${c.bold}${pkg.name}${c.reset} — Standalone storefront scaffolding CLI
 
 ${c.bold}Usage:${c.reset}
-  node cli/newCliTool/index.js --name <tenant-name> [options]
+  npx ${pkg.name} --name <tenant-name> [options]
 
 ${c.bold}Options:${c.reset}
   --name          ${c.dim}(required)${c.reset}  Tenant / directory name
@@ -263,16 +264,16 @@ ${c.bold}settings.json format:${c.reset}
 
 ${c.bold}Examples:${c.reset}
   ${c.dim}# Default — uses SSH keys${c.reset}
-  node cli/newCliTool/index.js --name my-tenant
+  npx ${pkg.name} --name my-tenant
 
   ${c.dim}# Explicit PAT (switches to HTTPS mode)${c.reset}
-  node cli/newCliTool/index.js --name my-tenant --pat ghp_xxx
+  npx ${pkg.name} --name my-tenant --pat ghp_xxx
 
   ${c.dim}# PAT via environment variable (switches to HTTPS mode)${c.reset}
-  GITHUB_PAT=ghp_xxx node cli/newCliTool/index.js --name my-tenant
+  GITHUB_PAT=ghp_xxx npx ${pkg.name} --name my-tenant
 
   ${c.dim}# Force HTTPS mode — prompts for PAT interactively${c.reset}
-  node cli/newCliTool/index.js --name my-tenant --no-ssh
+  npx ${pkg.name} --name my-tenant --no-ssh
 `);
   process.exit(0);
 }
@@ -401,7 +402,7 @@ function httpsToSsh(url) {
 // ─── Banner ──────────────────────────────────────────────────────
 console.log(`
 ${c.bold}${c.cyan}┌──────────────────────────────────────┐
-│     newCliTool  v1.0.0               │
+│     create-storefront  v${pkg.version}          │
 │     Standalone Storefront Scaffold   │
 └──────────────────────────────────────┘${c.reset}
 `);

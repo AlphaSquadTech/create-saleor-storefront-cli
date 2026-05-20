@@ -1,5 +1,5 @@
 {
-  "templateUrl": "https://github.com/AlphaSquadTech/saleor-template-standard.git",
+  "templateUrl": "https://github.com/webshopmanager/saleor-template-standard.git",
   "env": {
     "NEXT_PUBLIC_THEME_LAYOUT": "showroom",
     "NEXT_PUBLIC_THEME_PALETTE": "forest-green",
