@@ -190,11 +190,16 @@ function run(cmd, opts = {}) {
 }
 
 // ─── Template registry ───────────────────────────────────────────
+// NOTE: The `basic` template repo still lives under the legacy AlphaSquadTech
+// org. Once it's transferred to webshopmanager (matching standard / advanced),
+// update both URLs here and flip `ready` back to true. Until then, mark it
+// not-ready so the CLI's existing "work in progress" message guides users to
+// the standard template.
 const TEMPLATES = {
   basic: {
     url: "https://github.com/AlphaSquadTech/saleor-template-basic.git",
     sshUrl: "git@github.com:AlphaSquadTech/saleor-template-basic.git",
-    ready: true,
+    ready: false,
   },
   standard: {
     url: "https://github.com/webshopmanager/saleor-template-standard.git",
